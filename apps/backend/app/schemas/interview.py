@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 from enum import Enum
 
@@ -310,3 +310,28 @@ class QuestionGenerationResponse(BaseModel):
     questions: List[Dict[str, Any]]
     generation_metadata: Dict[str, Any]
     processing_time: float
+
+
+class AIInterviewerMessage(BaseModel):
+    """Schema for AI interviewer messages."""
+    type: str = Field(..., description="Message type (introduction, feedback, transition, etc.)")
+    text: str = Field(..., description="AI interviewer message text")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional message metadata")
+
+
+class WebSocketMessage(BaseModel):
+    """Schema for WebSocket messages."""
+    type: str = Field(..., description="Message type")
+    data: Dict[str, Any] = Field(default_factory=dict, description="Message data")
+    timestamp: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class RealTimeProgress(BaseModel):
+    """Schema for real-time progress updates."""
+    session_id: UUID
+    progress_percentage: float = Field(..., ge=0, le=100)
+    questions_answered: int = Field(..., ge=0)
+    total_questions: int = Field(..., ge=1)
+    current_scores: Dict[str, float] = Field(default_factory=dict)
+    time_elapsed_minutes: float = Field(..., ge=0)
+    estimated_remaining_minutes: float = Field(..., ge=0)

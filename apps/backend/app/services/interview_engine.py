@@ -34,44 +34,104 @@ class InterviewEngine:
         self.groq_client = GroqClient()
         self.speech_processor = SpeechProcessor()
         
-        # Question generation templates
+        # Enhanced question generation templates for different scenarios
         self.question_templates = {
             InterviewType.BEHAVIORAL: {
                 QuestionCategory.BEHAVIORAL: [
-                    "Tell me about a time when you {situation}. How did you handle it?",
-                    "Describe a situation where you had to {challenge}. What was your approach?",
-                    "Give me an example of when you {scenario}. What was the outcome?",
+                    "Tell me about a time when you faced a significant challenge at work. How did you overcome it?",
+                    "Describe a situation where you had to work with a difficult team member. What was your approach?",
+                    "Give me an example of when you had to learn something new quickly. How did you go about it?",
+                    "Tell me about a time when you made a mistake. How did you handle it and what did you learn?",
+                    "Describe a situation where you had to meet a tight deadline. What steps did you take?",
+                    "Tell me about a time when you had to persuade someone to see things your way.",
+                    "Give me an example of when you showed leadership, even if you weren't in a leadership position.",
+                    "Describe a situation where you had to adapt to a significant change at work."
                 ],
                 QuestionCategory.SITUATIONAL: [
-                    "How would you handle a situation where {scenario}?",
-                    "What would you do if {challenge}?",
-                    "If you were faced with {situation}, how would you approach it?",
+                    "How would you handle a situation where you disagree with your manager's decision?",
+                    "What would you do if you discovered a colleague was not pulling their weight on a team project?",
+                    "If you were assigned a project with an unrealistic deadline, how would you approach it?",
+                    "How would you handle receiving constructive criticism about your work?",
+                    "What would you do if you had to work with a technology you've never used before?"
                 ]
             },
             InterviewType.TECHNICAL: {
                 QuestionCategory.TECHNICAL_CODING: [
-                    "Implement a function that {problem_description}",
-                    "Design an algorithm to {algorithm_task}",
-                    "Write code to solve the following problem: {coding_problem}",
+                    "Implement a function to reverse a linked list iteratively and recursively.",
+                    "Design an algorithm to find the longest palindromic substring in a given string.",
+                    "Write code to implement a basic LRU (Least Recently Used) cache.",
+                    "Solve the two-sum problem with optimal time and space complexity.",
+                    "Implement a function to validate if a binary tree is a valid binary search tree.",
+                    "Design an algorithm to merge two sorted arrays in-place.",
+                    "Write code to detect if a linked list has a cycle and find the starting point.",
+                    "Implement a function to find the kth largest element in an unsorted array."
                 ],
                 QuestionCategory.TECHNICAL_SYSTEM_DESIGN: [
-                    "Design a system for {system_requirement}",
-                    "How would you architect {system_description}?",
-                    "Explain how you would scale {scaling_scenario}",
+                    "Design a URL shortening service like bit.ly. Consider scalability and reliability.",
+                    "How would you architect a chat application that supports millions of users?",
+                    "Design a distributed cache system. Explain your approach to consistency and availability.",
+                    "How would you design a recommendation system for an e-commerce platform?",
+                    "Explain how you would scale a web application from 1000 to 1 million users.",
+                    "Design a real-time analytics system for tracking user behavior on a website.",
+                    "How would you architect a file storage system like Dropbox or Google Drive?"
                 ]
             },
             InterviewType.HR: {
                 QuestionCategory.HR_GENERAL: [
-                    "Why are you interested in {company_name}?",
-                    "What attracts you to the {position_title} role?",
-                    "How do you see yourself contributing to {company_name}?",
+                    "Why are you interested in this position and our company?",
+                    "What are your greatest strengths and how do they apply to this role?",
+                    "What is your biggest weakness and how are you working to improve it?",
+                    "Where do you see yourself in 5 years?",
+                    "Why are you looking to leave your current role?",
+                    "What motivates you in your work?",
+                    "How do you handle stress and pressure?",
+                    "What type of work environment do you thrive in?"
                 ],
                 QuestionCategory.COMPANY_SPECIFIC: [
-                    "What do you know about {company_name}'s {company_aspect}?",
-                    "How would you fit into {company_name}'s culture?",
-                    "What challenges do you think {company_name} is facing?",
+                    "What do you know about our company's mission and values?",
+                    "How would you contribute to our company culture?",
+                    "What challenges do you think our industry is facing?",
+                    "Why do you want to work for us specifically?",
+                    "What do you think sets us apart from our competitors?"
+                ]
+            },
+            InterviewType.MIXED: {
+                QuestionCategory.BEHAVIORAL: [
+                    "Tell me about a technical project you're proud of and the challenges you faced.",
+                    "Describe a time when you had to explain a complex technical concept to a non-technical person.",
+                    "Give me an example of when you had to debug a difficult problem under pressure."
+                ],
+                QuestionCategory.TECHNICAL_CODING: [
+                    "Walk me through your approach to solving this coding problem step by step.",
+                    "How would you optimize this solution for better performance?",
+                    "What edge cases would you consider for this implementation?"
                 ]
             }
+        }
+        
+        # Scenario-specific evaluation criteria
+        self.evaluation_criteria = {
+            InterviewType.BEHAVIORAL: [
+                "Uses STAR method (Situation, Task, Action, Result)",
+                "Provides specific examples and details",
+                "Demonstrates self-awareness and learning",
+                "Shows problem-solving skills",
+                "Exhibits relevant soft skills"
+            ],
+            InterviewType.TECHNICAL: [
+                "Demonstrates technical knowledge and accuracy",
+                "Explains thought process clearly",
+                "Considers edge cases and constraints",
+                "Discusses time and space complexity",
+                "Shows problem-solving approach"
+            ],
+            InterviewType.HR: [
+                "Shows genuine interest and research",
+                "Aligns with company values and culture",
+                "Demonstrates career planning and goals",
+                "Exhibits professionalism and communication skills",
+                "Provides honest and thoughtful responses"
+            ]
         }
     
     async def create_interview_session(
@@ -118,6 +178,75 @@ class InterviewEngine:
         
         logger.info(f"Created interview session {session.id} with {len(questions)} questions")
         return session
+    
+    async def create_scenario_based_interview(
+        self,
+        user_id: UUID,
+        interview_type: InterviewType,
+        company_name: Optional[str] = None,
+        position_title: Optional[str] = None,
+        difficulty_level: DifficultyLevel = DifficultyLevel.MEDIUM,
+        duration_minutes: int = 45
+    ) -> InterviewSession:
+        """Create a scenario-based interview session with predefined structure."""
+        
+        # Define scenario-specific configurations
+        scenario_configs = {
+            InterviewType.BEHAVIORAL: {
+                "title": f"Behavioral Interview - {position_title or 'General Position'}",
+                "description": "Practice behavioral questions using the STAR method",
+                "categories": [QuestionCategory.BEHAVIORAL, QuestionCategory.SITUATIONAL],
+                "question_count": 8,
+                "topic_tags": ["leadership", "teamwork", "problem-solving", "communication"]
+            },
+            InterviewType.TECHNICAL: {
+                "title": f"Technical Interview - {position_title or 'Software Engineer'}",
+                "description": "Practice coding problems and system design questions",
+                "categories": [QuestionCategory.TECHNICAL_CODING, QuestionCategory.TECHNICAL_SYSTEM_DESIGN],
+                "question_count": 6,
+                "topic_tags": ["algorithms", "data-structures", "system-design", "coding"]
+            },
+            InterviewType.HR: {
+                "title": f"HR Interview - {company_name or 'General Company'}",
+                "description": "Practice HR and culture fit questions",
+                "categories": [QuestionCategory.HR_GENERAL, QuestionCategory.COMPANY_SPECIFIC],
+                "question_count": 10,
+                "topic_tags": ["culture-fit", "motivation", "career-goals", "company-knowledge"]
+            },
+            InterviewType.MIXED: {
+                "title": f"Full Interview Loop - {position_title or 'Software Engineer'}",
+                "description": "Complete interview experience with multiple rounds",
+                "categories": [
+                    QuestionCategory.BEHAVIORAL, 
+                    QuestionCategory.TECHNICAL_CODING,
+                    QuestionCategory.HR_GENERAL
+                ],
+                "question_count": 12,
+                "topic_tags": ["comprehensive", "full-loop", "mixed-format"]
+            }
+        }
+        
+        config = scenario_configs.get(interview_type, scenario_configs[InterviewType.BEHAVIORAL])
+        
+        # Create session data
+        session_data = InterviewSessionCreate(
+            interview_type=interview_type,
+            title=config["title"],
+            description=config["description"],
+            company_name=company_name,
+            position_title=position_title,
+            total_duration=duration_minutes,
+            question_count=config["question_count"],
+            difficulty_level=difficulty_level,
+            adaptive_mode=True,
+            performance_threshold=0.7,
+            question_categories=config["categories"],
+            topic_tags=config["topic_tags"],
+            enable_video_recording=True,
+            enable_audio_recording=True
+        )
+        
+        return await self.create_interview_session(user_id, session_data)
     
     async def start_interview(self, session_id: UUID, user_id: UUID) -> InterviewSession:
         """Start an interview session."""
@@ -187,9 +316,13 @@ class InterviewEngine:
         self.db.add(response)
         await self.db.flush()
         
-        # Process audio if available
+        # Process audio if available for enhanced analysis
         if audio_file_path:
             await self._process_audio_response(response, audio_file_path)
+        
+        # Process video if available (extract audio for analysis)
+        if video_file_path and not audio_file_path:
+            await self._process_video_response(response, video_file_path)
         
         # Analyze response with AI
         await self._analyze_response(response, session)
@@ -315,27 +448,18 @@ class InterviewEngine:
     async def _call_groq_for_questions(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Call Groq API to generate interview questions."""
         
-        prompt = self._build_question_generation_prompt(context)
-        
         try:
-            response = await self.groq_client.generate_response(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert interview coach. Generate realistic, engaging interview questions based on the provided context. Return valid JSON only."
-                    },
-                    {
-                        "role": "user", 
-                        "content": prompt
-                    }
-                ],
-                max_tokens=2000,
-                temperature=0.7
+            questions = await self.groq_client.generate_interview_questions(
+                interview_type=context["interview_type"],
+                category=context["category"],
+                difficulty_level=context["difficulty_level"],
+                company_name=context.get("company_name"),
+                position_title=context.get("position_title"),
+                topic_tags=context.get("topic_tags", []),
+                count=context["count"]
             )
             
-            # Parse JSON response
-            questions_data = json.loads(response)
-            return questions_data.get("questions", [])
+            return questions
             
         except Exception as e:
             logger.error(f"Groq API call failed: {e}")
@@ -445,29 +569,176 @@ Return JSON format:
         response: InterviewResponse, 
         audio_file_path: str
     ):
-        """Process audio response for speech analysis."""
+        """Process audio response for comprehensive speech analysis."""
         
         try:
-            # Transcribe audio
-            transcript_result = await self.speech_processor.transcribe_audio(audio_file_path)
+            # Transcribe audio using Whisper
+            transcript, confidence, detailed_results = await self.speech_processor.transcribe_audio(audio_file_path)
             
-            if transcript_result:
-                response.response_text = transcript_result.get("text", "")
-                response.transcript_confidence = transcript_result.get("confidence", 0.0)
+            if transcript:
+                # Update response with transcription
+                if not response.response_text:  # Only update if no text was provided
+                    response.response_text = transcript
+                response.transcript_confidence = confidence
                 
-                # Analyze speech characteristics
-                speech_analysis = await self.speech_processor.analyze_speech_quality(
-                    audio_file_path
+                # Extract word timestamps for detailed analysis
+                word_timestamps = detailed_results.get("word_timestamps", [])
+                
+                # Perform comprehensive speech analysis
+                speech_analysis = await self.speech_processor.analyze_speech_patterns(
+                    transcript, word_timestamps
                 )
                 
-                if speech_analysis:
-                    response.speech_pace = speech_analysis.get("words_per_minute")
-                    response.filler_word_count = speech_analysis.get("filler_words", 0)
-                    response.pause_count = speech_analysis.get("pause_count", 0)
-                    response.volume_consistency = speech_analysis.get("volume_consistency")
+                # Update response with speech metrics
+                response.speech_pace = speech_analysis.get("words_per_minute", 0)
+                response.filler_word_count = speech_analysis.get("filler_word_count", 0)
+                response.pause_count = len([p for p in speech_analysis.get("filler_words_detected", []) 
+                                          if "pause" in p.get("word", "").lower()])
+                
+                # Analyze language quality
+                language_analysis = await self.speech_processor.analyze_language_quality(transcript)
+                
+                # Calculate confidence level based on speech patterns
+                response.confidence_level = self._calculate_speech_confidence(
+                    speech_analysis, language_analysis
+                )
+                
+                # Analyze sentiment (basic implementation)
+                response.sentiment_score = self._analyze_sentiment(transcript)
+                
+                logger.info(f"Audio analysis completed for response {response.id}")
                 
         except Exception as e:
             logger.error(f"Audio processing failed: {e}")
+    
+    async def _process_video_response(
+        self, 
+        response: InterviewResponse, 
+        video_file_path: str
+    ):
+        """Process video response by extracting and analyzing audio."""
+        
+        try:
+            # Extract audio from video file
+            audio_file_path = await self._extract_audio_from_video(video_file_path)
+            
+            if audio_file_path:
+                # Process the extracted audio
+                await self._process_audio_response(response, audio_file_path)
+                
+                # TODO: Add video analysis features like:
+                # - Eye contact detection
+                # - Facial expression analysis
+                # - Body language assessment
+                # - Gesture recognition
+                
+                logger.info(f"Video processing completed for response {response.id}")
+                
+        except Exception as e:
+            logger.error(f"Video processing failed: {e}")
+    
+    async def _extract_audio_from_video(self, video_file_path: str) -> Optional[str]:
+        """Extract audio track from video file."""
+        
+        try:
+            import subprocess
+            import tempfile
+            import os
+            
+            # Create temporary audio file
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio:
+                audio_output_path = temp_audio.name
+            
+            # Use ffmpeg to extract audio
+            cmd = [
+                "ffmpeg", "-i", video_file_path,
+                "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
+                audio_output_path, "-y"
+            ]
+            
+            # Run extraction in thread pool to avoid blocking
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None, 
+                subprocess.run, 
+                cmd, 
+                subprocess.PIPE, 
+                subprocess.PIPE
+            )
+            
+            if result.returncode == 0 and os.path.exists(audio_output_path):
+                return audio_output_path
+            else:
+                logger.error(f"Audio extraction failed: {result.stderr}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error extracting audio from video: {e}")
+            return None
+    
+    def _calculate_speech_confidence(
+        self, 
+        speech_analysis: Dict, 
+        language_analysis: Dict
+    ) -> float:
+        """Calculate confidence level based on speech patterns."""
+        
+        # Factors that indicate confidence
+        wpm = speech_analysis.get("words_per_minute", 0)
+        filler_percentage = speech_analysis.get("filler_word_percentage", 0)
+        pause_frequency = speech_analysis.get("pause_frequency", 0)
+        grammar_score = language_analysis.get("grammar_score", 0.5)
+        
+        # Optimal speaking rate indicates confidence
+        wpm_confidence = 1.0 if 120 <= wpm <= 180 else max(0.3, min(wpm / 150, 180 / wpm))
+        
+        # Fewer fillers indicate more confidence
+        filler_confidence = max(0.0, 1.0 - (filler_percentage / 20))
+        
+        # Moderate pausing is good, too many or too few indicates nervousness
+        pause_confidence = 1.0 if 2 <= pause_frequency <= 6 else max(0.3, 1.0 - abs(pause_frequency - 4) / 10)
+        
+        # Combine factors
+        confidence = (
+            wpm_confidence * 0.3 + 
+            filler_confidence * 0.3 + 
+            pause_confidence * 0.2 + 
+            grammar_score * 0.2
+        )
+        
+        return max(0.0, min(1.0, confidence))
+    
+    def _analyze_sentiment(self, text: str) -> float:
+        """Basic sentiment analysis of response text."""
+        
+        try:
+            # Simple keyword-based sentiment analysis
+            positive_words = {
+                'excited', 'passionate', 'love', 'enjoy', 'great', 'excellent', 
+                'amazing', 'wonderful', 'fantastic', 'good', 'positive', 'confident'
+            }
+            
+            negative_words = {
+                'difficult', 'challenging', 'hard', 'struggle', 'problem', 'issue',
+                'worried', 'concerned', 'nervous', 'anxious', 'bad', 'terrible'
+            }
+            
+            words = text.lower().split()
+            positive_count = sum(1 for word in words if word in positive_words)
+            negative_count = sum(1 for word in words if word in negative_words)
+            
+            total_sentiment_words = positive_count + negative_count
+            
+            if total_sentiment_words == 0:
+                return 0.0  # Neutral
+            
+            # Calculate sentiment score (-1 to 1)
+            sentiment = (positive_count - negative_count) / total_sentiment_words
+            return max(-1.0, min(1.0, sentiment))
+            
+        except Exception as e:
+            logger.error(f"Sentiment analysis failed: {e}")
+            return 0.0
     
     async def _analyze_response(
         self, 
@@ -483,28 +754,22 @@ Return JSON format:
             # Get question for context
             question = await self.db.get(InterviewQuestion, response.question_id)
             
+            # Prepare interview context
+            interview_context = {
+                "interview_type": session.interview_type,
+                "company_name": session.company_name,
+                "position_title": session.position_title,
+                "difficulty_level": session.difficulty_level
+            }
+            
             # Analyze with Groq
-            analysis_prompt = self._build_response_analysis_prompt(
-                question, response, session
+            analysis_data = await self.groq_client.analyze_interview_response(
+                question_text=question.question_text,
+                response_text=response.response_text,
+                question_category=question.category,
+                evaluation_criteria=question.evaluation_criteria,
+                interview_context=interview_context
             )
-            
-            analysis_result = await self.groq_client.generate_response(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert interview coach. Analyze the candidate's response and provide detailed feedback. Return valid JSON only."
-                    },
-                    {
-                        "role": "user",
-                        "content": analysis_prompt
-                    }
-                ],
-                max_tokens=1500,
-                temperature=0.3
-            )
-            
-            # Parse analysis results
-            analysis_data = json.loads(analysis_result)
             
             # Update response with analysis
             response.content_relevance = analysis_data.get("content_relevance", 0.5)
@@ -600,23 +865,67 @@ Return JSON format:
         avg_score = sum(r.overall_score for r in responses) / len(responses)
         performance_ratio = avg_score / 100.0
         
-        # Adjust difficulty based on performance
-        if performance_ratio > session.performance_threshold + 0.1:
-            # Performing well, increase difficulty
-            await self._generate_harder_followup_question(session)
-        elif performance_ratio < session.performance_threshold - 0.1:
-            # Struggling, provide easier or supportive question
-            await self._generate_easier_followup_question(session)
+        # Get the most recent response for context
+        latest_response = responses[0]
+        latest_question = await self.db.get(InterviewQuestion, latest_response.question_id)
+        
+        # Generate adaptive follow-up question if needed
+        if abs(performance_ratio - session.performance_threshold) > 0.1:
+            await self._generate_adaptive_followup_question(
+                session, latest_question, latest_response, performance_ratio
+            )
     
-    async def _generate_harder_followup_question(self, session: InterviewSession):
-        """Generate a more challenging follow-up question."""
-        # Implementation for adaptive difficulty increase
-        pass
-    
-    async def _generate_easier_followup_question(self, session: InterviewSession):
-        """Generate an easier follow-up question."""
-        # Implementation for adaptive difficulty decrease
-        pass
+    async def _generate_adaptive_followup_question(
+        self,
+        session: InterviewSession,
+        previous_question: InterviewQuestion,
+        previous_response: InterviewResponse,
+        performance_ratio: float
+    ):
+        """Generate adaptive follow-up question based on performance."""
+        
+        try:
+            # Prepare context for follow-up generation
+            interview_context = {
+                "interview_type": session.interview_type,
+                "category": previous_question.category,
+                "company_name": session.company_name,
+                "position_title": session.position_title,
+                "difficulty_level": session.difficulty_level
+            }
+            
+            # Generate follow-up question using AI
+            followup_data = await self.groq_client.generate_followup_question(
+                original_question=previous_question.question_text,
+                user_response=previous_response.response_text,
+                performance_score=performance_ratio,
+                interview_context=interview_context
+            )
+            
+            if followup_data:
+                # Create and add follow-up question
+                followup_question = InterviewQuestion(
+                    session_id=session.id,
+                    question_text=followup_data["question_text"],
+                    category=previous_question.category,
+                    difficulty_level=session.difficulty_level,
+                    expected_duration=followup_data.get("expected_duration", 90),
+                    question_order=len(session.questions) + 1,
+                    is_followup=True,
+                    parent_question_id=previous_question.id,
+                    generated_by_ai=True,
+                    context_information=followup_data.get("context_information", ""),
+                    evaluation_criteria=followup_data.get("evaluation_criteria", []),
+                    difficulty_adjustment=followup_data.get("difficulty_adjustment", 0.0)
+                )
+                
+                self.db.add(followup_question)
+                session.question_count += 1  # Increase total question count
+                
+                logger.info(f"Generated adaptive follow-up question for session {session.id}")
+                
+        except Exception as e:
+            logger.error(f"Failed to generate adaptive follow-up question: {e}")
     
     async def _complete_interview(self, session: InterviewSession):
         """Complete interview and generate final analysis."""

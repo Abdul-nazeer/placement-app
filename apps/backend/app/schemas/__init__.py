@@ -166,6 +166,33 @@ from .resume import (
     ResumeComparisonResponse
 )
 
+from .interview import (
+    # Interview session schemas
+    InterviewSessionCreate,
+    InterviewSessionResponse,
+    InterviewSessionUpdate,
+    InterviewSessionSummary,
+    
+    # Interview question schemas
+    InterviewQuestionCreate,
+    InterviewQuestionResponse,
+    
+    # Interview response schemas
+    InterviewResponseCreate,
+    InterviewResponseUpdate,
+    InterviewResponseResponse,
+    
+    # Analytics and reporting
+    InterviewAnalytics,
+    
+    # AI and real-time features
+    QuestionGenerationRequest,
+    QuestionGenerationResponse,
+    AIInterviewerMessage,
+    WebSocketMessage,
+    RealTimeProgress
+)
+
 __all__ = [
     # Auth schemas
     "UserRegistration",
@@ -272,5 +299,22 @@ __all__ = [
     "ResumeTemplateResponse",
     "ResumeOptimizationRequest",
     "ResumeComparisonRequest",
-    "ResumeComparisonResponse"
+    "ResumeComparisonResponse",
+    
+    # Interview schemas
+    "InterviewSessionCreate",
+    "InterviewSessionResponse",
+    "InterviewSessionUpdate",
+    "InterviewSessionSummary",
+    "InterviewQuestionCreate",
+    "InterviewQuestionResponse",
+    "InterviewResponseCreate",
+    "InterviewResponseUpdate",
+    "InterviewResponseResponse",
+    "InterviewAnalytics",
+    "QuestionGenerationRequest",
+    "QuestionGenerationResponse",
+    "AIInterviewerMessage",
+    "WebSocketMessage",
+    "RealTimeProgress"
 ]

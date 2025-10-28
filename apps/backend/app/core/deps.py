@@ -1,7 +1,8 @@
 from typing import Generator, Optional
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, WebSocket
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
+import urllib.parse
 
 from app.core.database import get_db
 from app.services.auth import AuthService
@@ -113,4 +114,42 @@ async def get_optional_current_user(
     try:
         return await auth_service.get_current_user(credentials.credentials)
     except HTTPException:
+        return None
+
+
+async def get_current_user_websocket(
+    websocket: WebSocket,
+    db: AsyncSession
+) -> Optional[User]:
+    """Get current user from WebSocket connection with token validation."""
+    
+    try:
+        # Extract token from query parameters or headers
+        token = None
+        
+        # Try to get token from query parameters
+        query_params = dict(websocket.query_params)
+        if "token" in query_params:
+            token = query_params["token"]
+        
+        # Try to get token from headers
+        if not token and "authorization" in websocket.headers:
+            auth_header = websocket.headers["authorization"]
+            if auth_header.startswith("Bearer "):
+                token = auth_header[7:]
+        
+        if not token:
+            return None
+        
+        # Validate token using auth service
+        auth_service = AuthService(db)
+        user = await auth_service.get_current_user(token)
+        
+        return user
+        
+    except Exception as e:
+        # Log error but don't raise exception for WebSocket
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"WebSocket authentication error: {e}")
         return None

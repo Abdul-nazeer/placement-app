@@ -4,7 +4,7 @@ This guide will help you set up the PlacementPrep application with all necessary
 
 ## Prerequisites
 
-Before starting, ensure you have the following installed:
+Before starting, ensure you had following installed:
 
 1. **Node.js** (v18 or higher) - [Download from nodejs.org](https://nodejs.org/)
 2. **Python** (v3.9 or higher) - [Download from python.org](https://python.org/)
